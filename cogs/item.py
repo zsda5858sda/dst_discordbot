@@ -84,24 +84,24 @@ class Item(Public):
             r = requests.get(f"{host}/index.php?title=%E7%89%B9%E6%AE%8A:%E6%90%9C%E7%B4%A2&search={keyword}&profile=default&sort=just_match")
             soup = BeautifulSoup(r.content, 'lxml')
             results = soup.find_all('li', class_='mw-search-result')
-            if len(results) == 1:
-                url = f"{host}{results[0].find('a')['href']}"
-                r = requests.get(url)
-                #用lxml的html函式來處理內容格式
-                byte_data = r.content
-                source_code = html.fromstring(byte_data)
+            # if len(results) == 1:
+            url = f"{host}{results[0].find('a')['href']}"
+            r = requests.get(url)
+            #用lxml的html函式來處理內容格式
+            byte_data = r.content
+            source_code = html.fromstring(byte_data)
 
-                title = source_code.xpath('//*[@id="firstHeading"]/h1/text()')[0]
-                contents = source_code.xpath('//*[@id="mw-content-text"]/div/h2[1]/preceding-sibling::p//text()')
-                if len(contents) == 1:
-                    contents = source_code.xpath('//*[@id="mw-content-text"]/div/p//text()')
-                content = (''.join(contents)).replace('\n', '\n\n')
-                
-                embed = discord.Embed(title=title, description=content, color=0x85d0ff, url=url)
-                await interaction.followup.send(content=f"{interaction.user.mention}", embed=embed)
-            else:
-                #do something
-                await interaction.followup.send(content="editing...")
+            title = source_code.xpath('//*[@id="firstHeading"]/h1/text()')[0]
+            contents = source_code.xpath('//*[@id="mw-content-text"]/div/h2[1]/preceding-sibling::p//text()')
+            if len(contents) == 1:
+                contents = source_code.xpath('//*[@id="mw-content-text"]/div/p//text()')
+            content = (''.join(contents)).replace('\n', '\n\n')
+            
+            embed = discord.Embed(title=title, description=content, color=0x85d0ff, url=url)
+            await interaction.followup.send(content=f"{interaction.user.mention}", embed=embed)
+            # else:
+            #     #do something
+            #     await interaction.followup.send(content="editing...")
         except Exception as e:
             msg = f"出現錯誤：{str(e)}"
             logger.error(msg)
