@@ -101,7 +101,7 @@ class Item(Public):
                 await interaction.followup.send(content=f"{interaction.user.mention}", embed=embed)
             else:
                 #do something
-                await interaction.followup.send(content=f"{interaction.user.mention}", content='editing...')
+                await interaction.followup.send(content="editing...")
         except Exception as e:
             msg = f"出現錯誤：{str(e)}"
             logger.error(msg)
