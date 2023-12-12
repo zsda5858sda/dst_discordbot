@@ -1,7 +1,7 @@
 #discord
 from typing import Any
 import discord
-from discord import app_commands
+from discord import app_commands, ui
 from discord.ext import commands
 # web crawler
 import requests
@@ -19,6 +19,7 @@ class Item(Public):
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
         self._user_map = {}
+        self._result_map = {}
 
     @app_commands.command(name = "material", description = "查詢材料用途，請在後放加上欲搜尋之材料")
     @app_commands.describe(keyword = "輸入材料")
@@ -85,20 +86,21 @@ class Item(Public):
             soup = BeautifulSoup(r.content, 'lxml')
             results = soup.find_all('li', class_='mw-search-result')
             if len(results) > 0:
-                url = f"{host}{results[0].find('a')['href']}"
-                r = requests.get(url)
-                #用lxml的html函式來處理內容格式
-                byte_data = r.content
-                source_code = html.fromstring(byte_data)
-
-                title = source_code.xpath('//*[@id="firstHeading"]/h1/text()')[0]
-                contents = source_code.xpath('//*[@id="mw-content-text"]/div/h2[1]/preceding-sibling::p//text()')
-                if len(contents) == 1:
-                    contents = source_code.xpath('//*[@id="mw-content-text"]/div/p//text()')
-                content = (''.join(contents)).replace('\n', '\n\n')
-                
-                embed = discord.Embed(title=title, description=content, color=0x85d0ff, url=url)
-                await interaction.followup.send(content=f"{interaction.user.mention}", embed=embed)
+                if len(results) == 1:
+                    url = f"{host}{results[0].find('a')['href']}"
+                    embed = self.__get_search_result(url)
+                    await interaction.followup.send(content=f"{interaction.user.mention}", embed=embed)
+                else:
+                    view = ui.View()
+                    id_map = {}
+                    for r in results:
+                        title = r.find('a')['title']
+                        button = ui.Button(style=discord.ButtonStyle.primary, label=title, custom_id=title)
+                        button.callback = self.__button_callback
+                        id_map[title] = f"{host}{r.find('a')['href']}"
+                        view.add_item(button)
+                    self._result_map = id_map
+                    await interaction.followup.send(content=f"{interaction.user.mention}", view=view)
             else:
                 #do something
                 await interaction.followup.send(content="查無關鍵字")
@@ -106,6 +108,13 @@ class Item(Public):
             msg = f"出現錯誤：{str(e)}"
             logger.error(msg)
             await interaction.followup.send(msg)
+
+    # 創建按鈕交互函式
+    async def __button_callback(self, interaction: discord.Interaction):
+        
+        url = self._result_map[interaction.data['custom_id']]
+        embed = self.__get_search_result(url)
+        await interaction.response.edit_message(view=None, embed=embed)
 
     def __get_all_items(self, keyword):
         r = requests.get(f"https://dontstarve.fandom.com/wiki/{keyword}")
@@ -153,13 +162,6 @@ class Item(Public):
         for div in divs:
             title = div.find('a')['title']
             structure[title] = div.find('div', class_='recipe-count').text if div.find('div', class_='recipe-count') else '1x'
-            # if title in structure.keys():
-            #     structure[title] += 1
-            # else:
-            #     structure[title] = 1
-            # else:
-            #     key = list(structure.keys())[-1]
-            #     structure[key] = td.find('b').text
         logger.info(f"struceture: {structure}")
         return structure
     
@@ -184,6 +186,20 @@ class Item(Public):
             embeds.append(embed)
             material._cur_index += 1
         return embeds
+    
+    def __get_search_result(self, url):
+        r = requests.get(url)
+        #用lxml的html函式來處理內容格式
+        byte_data = r.content
+        source_code = html.fromstring(byte_data)
+
+        title = source_code.xpath('//*[@id="firstHeading"]/h1/text()')[0]
+        contents = source_code.xpath('//*[@id="mw-content-text"]/div/h2[1]/preceding-sibling::p//text()')
+        if len(contents) == 0:
+            contents = source_code.xpath('//*[@id="mw-content-text"]/div/p//text()')
+        content = (''.join(contents)).replace('\n', '\n\n')
+        
+        return discord.Embed(title=title, description=content, color=0x85d0ff, url=url)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Item(bot))
