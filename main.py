@@ -12,14 +12,19 @@ class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.token = kwargs.pop('token')
-        self.channel_id = kwargs.pop('channel_id')
+        self.channel_id = int(kwargs.pop('channel_id'))
+        self.channel = None
 
     # 當機器人完成啟動時
     async def on_ready(self):
         slash = await self.tree.sync()
         logging.info(f"目前登入身份 --> {self.user}")
         logging.info(f"載入 {len(slash)} 個斜線指令")
+        self.channel = self.get_channel(self.channel_id)  # 替換為您希望發送消息的頻道的 ID
+        logging.info('取得頻道訊息...')
+        logging.info(f'頻道名稱: {self.channel.name}')
 
+    # 啟動機器人
     async def start(self):
         async with self:
             await self.__load_extensions__()
