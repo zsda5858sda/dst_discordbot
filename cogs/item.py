@@ -1,17 +1,16 @@
-#discord
-from typing import Any
+# discord
 import discord
 from discord import app_commands, ui
 from discord.ext import commands
 # web crawler
 import requests
 from bs4 import BeautifulSoup, ResultSet
-from lxml import etree, html
+from lxml import html
 
 from cogs.public import Public
 from models.material import Material as MaterialModel
 import logging
-import traceback
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
